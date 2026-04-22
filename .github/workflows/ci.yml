@@ -93,13 +93,21 @@ jobs:
     runs-on: ubuntu-latest
     needs: build
     steps:
+      - name: login to ghcr
+        run: echo ${{ secrets.GITHUB_TOKEN }} | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+
+      - name: pull api image
+        run: docker pull ghcr.io/${{ github.repository_owner }}/api:${{ github.sha }}
+
       - name: install trivy
         run: |
           curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin v0.56.2
+
       - name: scan api
         run: |
           trivy image --severity CRITICAL --exit-code 1 --format sarif -o trivy.sarif \
           ghcr.io/${{ github.repository_owner }}/api:${{ github.sha }}
+
       - name: upload sarif
         uses: github/codeql-action/upload-sarif@v3
         with:
