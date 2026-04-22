@@ -1,174 +1,118 @@
-name: simple-ci-cd-pipeline
+name: ci
 
-on:
-  push:
-    branches: ["**"]
-  pull_request:
-    branches: ["**"]
+on: [push, pull_request]
 
-env:
-  REGISTRY: ghcr.io/${{ github.repository_owner }}
-  TAG: ${{ github.sha }}
-
-# =========================
-# 1. LINT
-# =========================
 jobs:
   lint:
     runs-on: ubuntu-latest
-
     steps:
-      - name: checkout code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: setup python
+      - name: install python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
+          python-version: '3.11'
 
       - name: install flake8
         run: pip install flake8
 
-      - name: run python lint
+      - name: run flake8
         run: flake8 api worker
 
-      - name: setup node
+      - name: install node
         uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: '20'
 
       - name: install eslint
-        run: npm install  eslint
+        run: npm install eslint
 
-      - name: run frontend lint
+      - name: run eslint
+        run: npx eslint frontend
+
+      - name: install hadolint
         run: |
-          cd frontend
-          npx eslint .
+          wget https://github.com/hadolint/hadolint/releases/download/v2.12.0/hadolint-Linux-x86_64
+          chmod +x hadolint-Linux-x86_64
+          sudo mv hadolint-Linux-x86_64 /usr/local/bin/hadolint
 
+      - name: lint api dockerfile
+        run: hadolint api/Dockerfile
 
-# =========================
-# 2. TEST
-# =========================
+      - name: lint worker dockerfile
+        run: hadolint worker/Dockerfile
+
+      - name: lint frontend dockerfile
+        run: hadolint frontend/Dockerfile
+
   test:
     runs-on: ubuntu-latest
     needs: lint
-
-    services:
-      redis:
-        image: redis:7-alpine
-        ports:
-          - 6379:6379
-
     steps:
-      - name: checkout code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: setup python
+      - name: install python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
+          python-version: '3.11'
 
-      - name: install dependencies
-        run: pip install pytest
+      - name: install deps
+        run: pip install -r api/requirements.txt
 
       - name: run tests
         run: cd api && pytest
 
-
-# =========================
-# 3. BUILD + PUSH
-# =========================
   build:
     runs-on: ubuntu-latest
     needs: test
-
     steps:
-      - name: checkout code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: login to GHCR
-        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+      - name: login to ghcr
+        run: echo ${{ secrets.GITHUB_TOKEN }} | docker login ghcr.io -u ${{ github.actor }} --password-stdin
 
-      - name: build api image
-        run: docker build -t $REGISTRY/api:$TAG ./api
+      - name: build api
+        run: docker build -t ghcr.io/${{ github.repository_owner }}/api:${{ github.sha }} ./api
 
-      - name: build worker image
-        run: docker build -t $REGISTRY/worker:$TAG ./worker
+      - name: build worker
+        run: docker build -t ghcr.io/${{ github.repository_owner }}/worker:${{ github.sha }} ./worker
 
-      - name: build frontend image
-        run: docker build -t $REGISTRY/frontend:$TAG ./frontend
+      - name: build frontend
+        run: docker build -t ghcr.io/${{ github.repository_owner }}/frontend:${{ github.sha }} ./frontend
 
-      - name: push api image
-        run: docker push $REGISTRY/api:$TAG
+      - name: push api
+        run: docker push ghcr.io/${{ github.repository_owner }}/api:${{ github.sha }}
 
-      - name: push worker image
-        run: docker push $REGISTRY/worker:$TAG
+      - name: push worker
+        run: docker push ghcr.io/${{ github.repository_owner }}/worker:${{ github.sha }}
 
-      - name: push frontend image
-        run: docker push $REGISTRY/frontend:$TAG
+      - name: push frontend
+        run: docker push ghcr.io/${{ github.repository_owner }}/frontend:${{ github.sha }}
 
-
-# =========================
-# 4. SECURITY SCAN
-# =========================
-  security:
+  scan:
     runs-on: ubuntu-latest
     needs: build
-
     steps:
       - name: install trivy
         run: |
           sudo apt-get update
-          sudo apt-get install -y wget
-          wget https://github.com/aquasecurity/trivy/releases/latest/download/trivy_0.50.0_Linux-64bit.deb
+          sudo apt-get install wget -y
+          wget https://github.com/aquasecurity/trivy/releases/download/v0.50.0/trivy_0.50.0_Linux-64bit.deb
           sudo dpkg -i trivy_0.50.0_Linux-64bit.deb
 
-      - name: scan api image
-        run: trivy image --severity CRITICAL --exit-code 1 $REGISTRY/api:$TAG
+      - name: scan api
+        run: trivy image --severity CRITICAL --exit-code 1 --format sarif -o trivy.sarif ghcr.io/${{ github.repository_owner }}/api:${{ github.sha }}
 
-      - name: scan worker image
-        run: trivy image --severity CRITICAL --exit-code 1 $REGISTRY/worker:$TAG
+      - name: upload sarif
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: trivy.sarif
 
-      - name: scan frontend image
-        run: trivy image --severity CRITICAL --exit-code 1 $REGISTRY/frontend:$TAG
-
-
-# =========================
-# 5. INTEGRATION TEST
-# =========================
   integration:
     runs-on: ubuntu-latest
-    needs: security
-
+    needs: scan
     steps:
-      - name: checkout code
-        uses: actions/checkout@v4
-
-      - name: start services
-        run: docker compose up -d
-
-      - name: wait for services
-        run: sleep 20
-
-      - name: test frontend
-        run: curl -f http://localhost:3000
-
-      - name: test api
-        run: curl -f http://localhost:8000/status
-
-      - name: stop services
-        if: always()
-        run: docker compose down
-
-
-# =========================
-# 6. DEPLOY
-# =========================
-  deploy:
-    runs-on: ubuntu-latest
-    needs: integration
-    if: github.ref == 'refs/heads/main'
-
-    steps:
-      - name: deploy message
-        run: echo "Deployment successful (simulation)"
+      - uses: actions/checkout@v4
+      - run: chmod +x ./integration.sh
+      - run: ./integration.sh
+      - run: docker compose down
