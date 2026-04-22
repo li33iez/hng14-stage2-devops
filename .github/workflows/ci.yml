@@ -6,13 +6,10 @@ on:
   pull_request:
     branches: ["**"]
 
-
-
 env:
   REGISTRY: localhost:5000
   TAG: ${{ github.sha }}
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
-
 
 
 # =========================
@@ -36,7 +33,7 @@ jobs:
         run: pip install flake8
 
       - name: run python lint
-        run: flake8 api worker || true
+        run: flake8 api worker
 
       # JS lint
       - name: setup node
@@ -48,7 +45,7 @@ jobs:
         run: npm install -g eslint
 
       - name: run frontend lint
-        run: eslint frontend || true
+        run: eslint frontend
 
 
 # =========================
@@ -77,7 +74,7 @@ jobs:
         run: pip install pytest
 
       - name: run tests
-        run: cd api && pytest || true
+        run: cd api && pytest
 
 
 # =========================
@@ -100,15 +97,18 @@ jobs:
       - name: build frontend image
         run: docker build -t $REGISTRY/frontend:$TAG ./frontend
 
-      - name: push images
-        run: |
-          docker push $REGISTRY/api:$TAG || true
-          docker push $REGISTRY/worker:$TAG || true
-          docker push $REGISTRY/frontend:$TAG || true
+      - name: push api image
+        run: docker push $REGISTRY/api:$TAG
+
+      - name: push worker image
+        run: docker push $REGISTRY/worker:$TAG
+
+      - name: push frontend image
+        run: docker push $REGISTRY/frontend:$TAG
 
 
 # =========================
-# 4. SECURITY SCAN
+# 4. SECURITY SCAN (STRICT)
 # =========================
   security:
     runs-on: ubuntu-latest
@@ -123,13 +123,13 @@ jobs:
           sudo dpkg -i trivy_0.50.0_Linux-64bit.deb
 
       - name: scan api image
-        run: trivy image $REGISTRY/api:$TAG || true
+        run: trivy image --severity CRITICAL --exit-code 1 $REGISTRY/api:$TAG
 
       - name: scan worker image
-        run: trivy image $REGISTRY/worker:$TAG || true
+        run: trivy image --severity CRITICAL --exit-code 1 $REGISTRY/worker:$TAG
 
       - name: scan frontend image
-        run: trivy image $REGISTRY/frontend:$TAG || true
+        run: trivy image --severity CRITICAL --exit-code 1 $REGISTRY/frontend:$TAG
 
 
 # =========================
@@ -143,25 +143,25 @@ jobs:
       - name: get code
         uses: actions/checkout@v4
 
-      - name: start app
+      - name: start stack
         run: docker compose up -d
 
-      - name: wait
+      - name: wait for services
         run: sleep 20
 
       - name: test frontend
-        run: curl http://localhost:3000 || true
+        run: curl http://localhost:3000
 
       - name: test api
-        run: curl http://localhost:8000/status || true
+        run: curl http://localhost:8000/status
 
-      - name: stop app
+      - name: cleanup
         if: always()
         run: docker compose down
 
 
 # =========================
-# 6. DEPLOY (ONLY MAIN)
+# 6. DEPLOY (MAIN ONLY)
 # =========================
   deploy:
     runs-on: ubuntu-latest
@@ -169,5 +169,5 @@ jobs:
     if: github.ref == 'refs/heads/main'
 
     steps:
-      - name: deploy message
-        run: echo "deploying app to production..."
+      - name: deploy
+        run: echo "Rolling deployment triggered (production simulation)"
