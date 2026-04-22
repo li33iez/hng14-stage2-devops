@@ -8,5 +8,3 @@ def test_two():
 
 def test_three():
     assert 3 == 3
-
-
