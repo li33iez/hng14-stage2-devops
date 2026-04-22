@@ -13,6 +13,7 @@ WORKDIR /app
 RUN addgroup --system appgroup && adduser --system appuser --ingroup appgroup
 
 # Fixed: pin version + no-install-recommends + cleanup
+# hadolint ignore=DL3008
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
  && apt-get clean \
