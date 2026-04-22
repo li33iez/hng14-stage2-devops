@@ -1,4 +1,4 @@
-name: ci
+name: ci/cid pipeline
 
 on: [push, pull_request]
 
@@ -97,8 +97,8 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install wget -y
-          wget https://github.com/aquasecurity/trivy/releases/download/v0.50.0/trivy_0.50.0_Linux-64bit.deb
-          sudo dpkg -i trivy_0.50.0_Linux-64bit.deb
+          wget https://github.com/aquasecurity/trivy/releases/download/v0.56.2/trivy_0.56.2_Linux-64bit.deb
+          sudo dpkg -i trivy_0.56.2_Linux-64bit.deb
 
       - name: scan api
         run: trivy image --severity CRITICAL --exit-code 1 --format sarif -o trivy.sarif ghcr.io/${{ github.repository_owner }}/api:${{ github.sha }}
