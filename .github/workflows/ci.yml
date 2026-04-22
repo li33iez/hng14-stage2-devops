@@ -1,4 +1,4 @@
-name: ci/cid pipeline
+name: cicid pipeline
 
 on: [push, pull_request]
 
