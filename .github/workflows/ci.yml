@@ -41,7 +41,9 @@ jobs:
         run: npm install  eslint
 
       - name: run frontend lint
-        run: npx eslint frontend
+        run: |
+          cd frontend
+          npx eslint .
 
 
 # =========================
