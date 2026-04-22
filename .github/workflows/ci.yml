@@ -38,10 +38,10 @@ jobs:
           node-version: "20"
 
       - name: install eslint
-        run: npm install -g eslint
+        run: npm install  eslint
 
       - name: run frontend lint
-        run: eslint frontend
+        run: npx eslint frontend
 
 
 # =========================
