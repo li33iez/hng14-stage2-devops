@@ -5,7 +5,14 @@ import os
 
 app = FastAPI()
 
-r = redis.Redis(host="localhost", port=6379)
+# FIX: use env variable instead of localhost
+redis_host = os.getenv("REDIS_HOST", "redis")
+r = redis.Redis(host=redis_host, port=6379)
+
+# FIX: add health endpoint
+@app.get("/health")
+def health():
+    return {"status": "ok"}
 
 @app.post("/jobs")
 def create_job():
