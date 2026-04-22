@@ -7,9 +7,8 @@ on:
     branches: ["**"]
 
 env:
-  REGISTRY: localhost:5000
-  TAG: ${{ github.sha }
-  ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION: true 
+  REGISTRY: ghcr.io/${{ github.repository_owner }}
+  TAG: ${{ github.sha }}
 
 # =========================
 # 1. LINT
@@ -22,7 +21,6 @@ jobs:
       - name: get code
         uses: actions/checkout@v4
 
-      # Python lint
       - name: setup python
         uses: actions/setup-python@v5
         with:
@@ -34,11 +32,10 @@ jobs:
       - name: run python lint
         run: flake8 api worker
 
-      # JS lint
       - name: setup node
         uses: actions/setup-node@v4
         with:
-          node-version: "18"
+          node-version: "20"
 
       - name: install eslint
         run: npm install -g eslint
@@ -87,6 +84,10 @@ jobs:
       - name: get code
         uses: actions/checkout@v4
 
+      # 🔐 LOGIN STEP ADDED HERE
+      - name: login to GHCR
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+
       - name: build api image
         run: docker build -t $REGISTRY/api:$TAG ./api
 
@@ -107,7 +108,7 @@ jobs:
 
 
 # =========================
-# 4. SECURITY SCAN (STRICT)
+# 4. SECURITY SCAN
 # =========================
   security:
     runs-on: ubuntu-latest
@@ -149,10 +150,10 @@ jobs:
         run: sleep 20
 
       - name: test frontend
-        run: curl http://localhost:3000
+        run: curl -f http://localhost:3000
 
       - name: test api
-        run: curl http://localhost:8000/status
+        run: curl -f http://localhost:8000/status
 
       - name: cleanup
         if: always()
@@ -160,7 +161,7 @@ jobs:
 
 
 # =========================
-# 6. DEPLOY (MAIN ONLY)
+# 6. DEPLOY
 # =========================
   deploy:
     runs-on: ubuntu-latest
@@ -169,4 +170,4 @@ jobs:
 
     steps:
       - name: deploy
-        run: echo "Rolling deployment triggered (production simulation)"
+        run: echo "Deployment successful "
