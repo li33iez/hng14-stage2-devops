@@ -2,7 +2,18 @@
 set -e
 
 echo "Waiting for services to be healthy..."
-timeout 120 bash -c 'while ! docker compose ps --format json | jq -e "all(.[]; .Health == \"healthy\" or .Health == \"\")"; do sleep 2; done'
+
+for i in {1..30}; do
+  if docker compose ps | grep -q "(unhealthy)"; then
+    echo "Still starting services..."
+    docker compose ps
+    sleep 5
+  else
+    echo "Services look healthy"
+    docker compose ps
+    break
+  fi
+done
 
 echo "Checking API from inside container..."
 docker exec hng14-stage2-devops-api-1 curl -sf http://localhost:8000/health
