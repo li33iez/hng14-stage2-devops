@@ -1,102 +1,75 @@
-version: "3.9"
-
 services:
-
   redis:
     image: redis:7-alpine
     networks:
       - hngjob
-
-    expose:
-      - "${REDIS_PORT}"
-
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
       timeout: 3s
       retries: 5
-
     deploy:
       resources:
         limits:
-          cpus: "${REDIS_CPU_LIMIT}"
-          memory: "${REDIS_MEMORY_LIMIT}"
-
+          cpus: "${REDIS_CPU_LIMIT:-0.25}"
+          memory: "${REDIS_MEMORY_LIMIT:-256M}"
 
   api:
     build: ./api
-
     environment:
-      - REDIS_HOST=${REDIS_HOST}
-      - REDIS_PORT=${REDIS_PORT}
-
+      - REDIS_HOST=${REDIS_HOST:-redis}
+      - REDIS_PORT=${REDIS_PORT:-6379}
     depends_on:
       redis:
         condition: service_healthy
-
     networks:
       - hngjob
-
     ports:
-      - "${API_PORT}:${API_PORT}"
-
+      - "${API_PORT:-8000}:8000"
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:${API_PORT}/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 10s
       timeout: 5s
       retries: 5
-
     deploy:
       resources:
         limits:
-          cpus: "${API_CPU_LIMIT}"
-          memory: "${API_MEMORY_LIMIT}"
-
+          cpus: "${API_CPU_LIMIT:-0.5}"
+          memory: "${API_MEMORY_LIMIT:-512M}"
 
   worker:
     build: ./worker
-
     environment:
-      - REDIS_HOST=${REDIS_HOST}
-      - REDIS_PORT=${REDIS_PORT}
-
+      - REDIS_HOST=${REDIS_HOST:-redis}
+      - REDIS_PORT=${REDIS_PORT:-6379}
     depends_on:
       redis:
         condition: service_healthy
-
     networks:
       - hngjob
-
     deploy:
       resources:
         limits:
-          cpus: "${WORKER_CPU_LIMIT}"
-          memory: "${WORKER_MEMORY_LIMIT}"
-
+          cpus: "${WORKER_CPU_LIMIT:-0.5}"
+          memory: "${WORKER_MEMORY_LIMIT:-512M}"
 
   frontend:
     build: ./frontend
-
     environment:
-      - API_URL=${API_URL}
-      - PORT=${FRONTEND_PORT}
-
+      - API_URL=${API_URL:-http://api:8000}
+      - PORT=${FRONTEND_PORT:-3000}
     depends_on:
       api:
         condition: service_healthy
-
     networks:
       - hngjob
-
     ports:
-      - "${FRONTEND_PORT}:${FRONTEND_PORT}"
-
+      - "${FRONTEND_PORT:-3000}:3000"
     deploy:
       resources:
         limits:
-          cpus: "${FRONTEND_CPU_LIMIT}"
-          memory: "${FRONTEND_MEMORY_LIMIT}"
-
+          cpus: "${FRONTEND_CPU_LIMIT:-0.5}"
+          memory: "${FRONTEND_MEMORY_LIMIT:-256M}"
 
 networks:
   hngjob:
