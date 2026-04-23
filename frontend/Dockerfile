@@ -1,37 +1,22 @@
-# ---------- BUILD STAGE ----------
-FROM node:20-alpine3.21 AS builder
-
+FROM node:20-alpine AS builder
 WORKDIR /app
-
 COPY package*.json ./
 RUN npm ci
-
 COPY . .
 RUN npm run build
 
-# ---------- RUNTIME STAGE ----------
-FROM node:20-alpine3.21
-
+FROM node:20-alpine AS production
 WORKDIR /app
 
-# install wget for healthcheck
-RUN apk add --no-cache wget
+# Pin wget version for hadolint DL3018
+RUN apk add --no-cache wget=1.24.5-r0 \
+    && adduser -D appuser
 
-# create non-root user
-RUN addgroup -S appgroup && adduser -S appuser -G appgroup
-
-# copy only what's needed to run
-COPY --from=builder /app/package*.json ./
+COPY --from=builder /app/.next ./.next
+COPY --from=builder /app/public ./public
+COPY --from=builder /app/package.json ./package.json
 COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/dist ./dist
-
-RUN chown -R appuser:appgroup /app
-
+RUN chown -R appuser:appuser /app
 USER appuser
-
-EXPOSE 3000
-
-HEALTHCHECK --interval=10s --timeout=3s --retries=3 \
-  CMD wget -qO- http://localhost:3000 || exit 1
-
-CMD ["node", "server.js"]
+HEALTHCHECK CMD wget --spider -q http://localhost:3000 || exit 1
+CMD ["npm", "app.js"]
