@@ -10,44 +10,46 @@ services:
       interval: 5s
       timeout: 3s
       retries: 5
+      start_period: 10s
     deploy:
       resources:
         limits:
-          cpus: "${REDIS_CPU_LIMIT:-0.25}"
-          memory: "${REDIS_MEMORY_LIMIT:-256M}"
+          cpus: "0.25"
+          memory: "256M"
 
   api:
     build: ./api
     container_name: hng14-stage2-devops-api-1
     restart: unless-stopped
     environment:
-      - REDIS_HOST=${REDIS_HOST:-redis}
-      - REDIS_PORT=${REDIS_PORT:-6379}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
     depends_on:
       redis:
         condition: service_healthy
     networks:
       - hngjob
     ports:
-      - "${API_PORT:-8000}:8000"
+      - "8000:8000"
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 10s
       timeout: 5s
       retries: 5
+      start_period: 15s
     deploy:
       resources:
         limits:
-          cpus: "${API_CPU_LIMIT:-0.5}"
-          memory: "${API_MEMORY_LIMIT:-512M}"
+          cpus: "0.5"
+          memory: "512M"
 
   worker:
     build: ./worker
     container_name: hng14-stage2-devops-worker-1
     restart: unless-stopped
     environment:
-      - REDIS_HOST=${REDIS_HOST:-redis}
-      - REDIS_PORT=${REDIS_PORT:-6379}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
     depends_on:
       redis:
         condition: service_healthy
@@ -56,33 +58,34 @@ services:
     deploy:
       resources:
         limits:
-          cpus: "${WORKER_CPU_LIMIT:-0.5}"
-          memory: "${WORKER_MEMORY_LIMIT:-512M}"
+          cpus: "0.5"
+          memory: "512M"
 
   frontend:
     build: ./frontend
     container_name: hng14-stage2-devops-frontend-1
     restart: unless-stopped
     environment:
-      - API_URL=${API_URL:-http://api:8000}
-      - PORT=${FRONTEND_PORT:-3000}
+      - API_URL=http://api:8000
+      - PORT=3000
     depends_on:
       api:
         condition: service_healthy
     networks:
       - hngjob
     ports:
-      - "${FRONTEND_PORT:-3000}:3000"
+      - "3000:3000"
     healthcheck:
-      test: ["CMD","curl","-f", "http://localhost:3000"]
+      test: ["CMD", "curl", "-f", "http://localhost:3000"]
       interval: 5s
       timeout: 3s
       retries: 10
+      start_period: 30s
     deploy:
       resources:
         limits:
-          cpus: "${FRONTEND_CPU_LIMIT:-0.5}"
-          memory: "${FRONTEND_MEMORY_LIMIT:-256M}"
+          cpus: "0.5"
+          memory: "256M"
 
 networks:
   hngjob:
