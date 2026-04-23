@@ -12,7 +12,7 @@ r = redis.Redis(host=redis_host, port=6379, decode_responses=True)
 
 @app.get("/")
 def root():
-    return {"message": "API running"}
+    return {"message": "api running"}
 
 
 @app.get("/health")
