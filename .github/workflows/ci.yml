@@ -84,46 +84,44 @@ jobs:
         uses: docker/setup-buildx-action@v3
 
       - name: Login to GHCR
-        run: echo ${{ secrets.GITHUB_TOKEN }} | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build API (cached + tagged)
+      - name: Build and Push API
         uses: docker/build-push-action@v5
         with:
           context: ./api
-          load: true
+          push: true
           tags: |
             ghcr.io/${{ github.repository_owner }}/api:latest
             ghcr.io/${{ github.repository_owner }}/api:${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      - name: Build Worker (cached + tagged)
+      - name: Build and Push Worker
         uses: docker/build-push-action@v5
         with:
           context: ./worker
-          load: true
+          push: true
           tags: |
             ghcr.io/${{ github.repository_owner }}/worker:latest
             ghcr.io/${{ github.repository_owner }}/worker:${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      - name: Build Frontend (cached + tagged)
+      - name: Build and Push Frontend
         uses: docker/build-push-action@v5
         with:
           context: ./frontend
-          load: true
+          push: true
           tags: |
             ghcr.io/${{ github.repository_owner }}/frontend:latest
             ghcr.io/${{ github.repository_owner }}/frontend:${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
-
-      - name: Push images
-        run: |
-          docker push ghcr.io/${{ github.repository_owner }}/api --all-tags
-          docker push ghcr.io/${{ github.repository_owner }}/worker --all-tags
-          docker push ghcr.io/${{ github.repository_owner }}/frontend --all-tags
 
   scan:
     runs-on: ubuntu-latest
@@ -174,28 +172,15 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Start local registry (required by grader)
-        run: docker run -d -p 5000:5000 --name registry registry:2
+      - name: Start services
+        run: docker compose up -d --build
 
-      - name: Rolling update - API
-        run: docker compose up -d --no-deps --build api
-
-      - name: Rolling update - Worker
-        run: docker compose up -d --no-deps --build worker
-
-      - name: Rolling update - Frontend
-        run: docker compose up -d --no-deps --build frontend
-
-      - name: Wait for services
+      - name: Wait for healthy
         run: |
           timeout 120 bash -c '
-          while true; do
+          while ! docker compose ps --format json | jq -e "all(.[]; .Health == \"healthy\" or .Health == \"\")"; do 
             docker compose ps
             sleep 5
-            if docker compose ps | grep -E "unhealthy|starting|restarting"; then
-              continue
-            fi
-            break
           done
           '
 
