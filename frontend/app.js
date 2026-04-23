@@ -18,6 +18,11 @@ if (!PORT) {
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'views')));
 
+// Added for Docker HEALTHCHECK
+app.get('/', (req, res) => {
+  res.status(200).send('OK');
+});
+
 app.post('/submit', async (req, res) => {
   try {
     const response = await axios.post(`${API_URL}/jobs`);
@@ -36,6 +41,7 @@ app.get('/status/:id', async (req, res) => {
   }
 });
 
-app.listen(PORT, () => {
+// Added '0.0.0.0' so container is reachable
+app.listen(PORT, '0.0.0.0', () => {
   console.log(`Frontend running on port ${PORT}`);
-});
+}); // Added missing closing
