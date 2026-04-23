@@ -1,6 +1,8 @@
 services:
   redis:
     image: redis:7-alpine
+    container_name: hng14-stage2-devops-redis-1
+    restart: unless-stopped
     networks:
       - hngjob
     healthcheck:
@@ -16,6 +18,8 @@ services:
 
   api:
     build: ./api
+    container_name: hng14-stage2-devops-api-1
+    restart: unless-stopped
     environment:
       - REDIS_HOST=${REDIS_HOST:-redis}
       - REDIS_PORT=${REDIS_PORT:-6379}
@@ -39,6 +43,8 @@ services:
 
   worker:
     build: ./worker
+    container_name: hng14-stage2-devops-worker-1
+    restart: unless-stopped
     environment:
       - REDIS_HOST=${REDIS_HOST:-redis}
       - REDIS_PORT=${REDIS_PORT:-6379}
@@ -55,6 +61,8 @@ services:
 
   frontend:
     build: ./frontend
+    container_name: hng14-stage2-devops-frontend-1
+    restart: unless-stopped
     environment:
       - API_URL=${API_URL:-http://api:8000}
       - PORT=${FRONTEND_PORT:-3000}
@@ -65,6 +73,11 @@ services:
       - hngjob
     ports:
       - "${FRONTEND_PORT:-3000}:3000"
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:3000"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
     deploy:
       resources:
         limits:
