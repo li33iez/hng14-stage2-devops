@@ -2,19 +2,23 @@ from fastapi.testclient import TestClient
 from unittest.mock import patch
 from main import app
 
+
 client = TestClient(app)
 
-def test_root_endpoint():
+
+def test_root():
     res = client.get("/")
     assert res.status_code == 200
 
-def test_health_endpoint():
+
+def test_health():
     res = client.get("/health")
     assert res.status_code == 200
     assert res.json() == {"status": "ok"}
 
+
 @patch("main.r")
-def test_submit_endpoint(mock_redis):
+def test_submit(mock_redis):
     mock_redis.lpush.return_value = 1
     mock_redis.hset.return_value = True
     res = client.post("/submit")
