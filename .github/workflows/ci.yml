@@ -139,13 +139,19 @@ jobs:
       - name: Wait for services healthy
         run: |
           timeout 120 bash -c '
-          while ! docker compose ps --format json | jq -e "all(.[]; .Health == \"healthy\" or .Health == \"\")"; do
+          while true; do
             echo "Waiting for containers to be healthy..."
             docker compose ps
-            sleep 3
+            sleep 5
+
+            if docker compose ps | grep -E "unhealthy|starting|restarting"; then
+              continue
+            fi
+
+            break
           done
           '
-      
+
       - name: Test API health
         run: docker exec hng14-stage2-devops-api-1 curl -sf http://localhost:8000/health
 
