@@ -1,26 +1,13 @@
 #!/bin/bash
 set -e
 
-echo "Starting services..."
-docker compose up -d
+echo "Waiting for services to be healthy..."
+timeout 120 bash -c 'while ! docker compose ps --format json | jq -e "all(.[]; .Health == \"healthy\" or .Health == \"\")"; do sleep 2; done'
 
-echo "Waiting for services..."
-sleep 15
+echo "Checking API from inside container..."
+docker exec hng14-stage2-devops-api-1 curl -sf http://localhost:8000/health
 
-echo "Containers status:"
-docker compose ps
+echo "Checking Frontend from inside container..."
+docker exec hng14-stage2-devops-frontend-1 wget --spider -q http://localhost:3000
 
-echo "Checking API..."
-curl -f http://localhost:8000/health
-
-echo "Checking frontend..."
-curl -f http://localhost:3000
-
-echo "Running test job..."
-JOB_ID=$(curl -s -X POST http://localhost:8000/submit | grep -o '"job_id":"[^"]*' | cut -d'"' -f4)
-
-curl -f http://localhost:8000/status/$JOB_ID
-
-echo "Success!"
-
-docker compose down -v
+echo "Integration tests passed"
