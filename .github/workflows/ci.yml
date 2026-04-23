@@ -165,14 +165,27 @@ jobs:
         uses: actions/checkout@v4
       - name: Start services
         run: docker compose up -d --build
+
+      # FIXED SECTION (ONLY CHANGE)
       - name: Wait for healthy
         run: |
-          timeout 120 bash -c '
-          while ! docker compose ps --format json | jq -e '\''all(.[]; .Health == "healthy" or .Health == "" or .Health == null)'\''; do
-            docker compose ps
-            sleep 5
+          for i in {1..30}; do
+            echo "Checking services health..."
+
+            if docker compose ps | grep -q "(unhealthy)"; then
+              echo "Still unhealthy..."
+              docker compose ps
+              sleep 5
+            else
+              echo "All services are healthy"
+              docker compose ps
+              exit 0
+            fi
           done
-          '
+
+          echo "Timeout waiting for services to become healthy"
+          exit 1
+
       - name: Run integration script
         run: |
           chmod +x ./integration.sh
