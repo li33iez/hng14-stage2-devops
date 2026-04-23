@@ -7,7 +7,7 @@ for i in {1..30}; do
   if docker compose ps | grep -q "(unhealthy)"; then
     echo "Still starting services..."
     docker compose ps
-    sleep 5
+    sleep 30
   else
     echo "Services look healthy"
     docker compose ps
