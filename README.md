@@ -7,7 +7,7 @@ This project is a containerized microservices system consisting of:
 - Worker service
 - Redis (message broker / cache)
 
-All services are orchestrated using Docker Compose.
+ services are orchestrated using Docker Compose.
 
 ---
 
