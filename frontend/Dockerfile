@@ -9,7 +9,7 @@ FROM node:20-alpine AS production
 WORKDIR /app
 
 # Pin wget version for hadolint DL3018
-RUN apk add --no-cache wget=1.24.5-r0 \
+RUN apk add --no-cache wget=1.24.5-r1 \
     && adduser -D appuser
 
 COPY --from=builder /app/.next ./.next
