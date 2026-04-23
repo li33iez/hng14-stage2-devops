@@ -28,5 +28,5 @@ def create_job():
 def get_job(job_id: str):
     status = r.hget(f"job:{job_id}", "status")
     if not status:
-        return JSONResponse(status_code=404, content={"error": "not found"})
+        return JSONResponse(status_code=404, content={"Error": "not found"})
     return {"job_id": job_id, "status": status}
