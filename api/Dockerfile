@@ -5,8 +5,10 @@ RUN pip install --no-cache-dir --user -r requirements.txt
 
 FROM python:3.11-alpine AS production
 WORKDIR /app
-RUN apk add --no-cache curl=8.10.1-r1 \
+RUN apk add --no-cache curl=8.17.0-r1 \
     && adduser -D appuser
+
+
 COPY --from=builder /root/.local /home/appuser/.local
 COPY . .
 RUN chown -R appuser:appuser /app
