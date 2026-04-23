@@ -3,12 +3,8 @@ const axios = require('axios');
 const path = require('path');
 const app = express();
 
-const API_URL = process.env.API_URL;
+const API_URL = process.env.API_URL || "http://localhost:8000";
 const PORT = process.env.PORT || 3000;
-
-if (!API_URL) {
-  throw new Error("API_URL is not defined in environment variables");
-}
 
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'views')));
