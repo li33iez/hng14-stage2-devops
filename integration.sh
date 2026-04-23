@@ -19,6 +19,6 @@ echo "Checking API from inside container..."
 docker exec hng14-stage2-devops-api-1 curl -sf http://localhost:8000/health
 
 echo "Checking Frontend from inside container..."
-docker exec hng14-stage2-devops-frontend-1 wget --spider -q http://localhost:3000
+docker exec hng14-stage2-devops-frontend-1 curl -f http://localhost:3000
 
 echo "Integration tests passed"
